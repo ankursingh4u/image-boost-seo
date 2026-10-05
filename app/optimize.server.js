@@ -310,37 +310,105 @@ export async function uploadAndReplaceImage(admin, productId, originalMediaId, o
   return newMedia.id;
 }
 
-export async function generateAIAltText(imageUrl, productTitle) {
+// Which vision model writes the alt text during an optimization run. Mirrors
+// AI_ALT_PROVIDER in app.alttextsuggestions.jsx so both paths use the same
+// provider; defaults to openai, so an unset value changes nothing.
+const ALT_PROVIDER = (process.env.AI_ALT_PROVIDER || "openai").toLowerCase();
+
+const ALT_PROMPT = (productTitle) =>
+  `Generate SEO-optimized alt text for this ${productTitle} image. Include: product type, color, material, style. Describe what you actually see. Keep under 125 characters. Don't use "image of". Return only the alt text.`;
+
+function tidyAlt(raw, productTitle) {
+  let altText = (raw || "").trim().replace(/^["']|["']$/g, "").replace(/\n/g, " ");
+  if (altText.length > 125) altText = altText.substring(0, 122) + "...";
+  return altText || `${productTitle} - product image`;
+}
+
+async function altTextOpenAI(imageUrl, productTitle) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return `${productTitle} - product image`;
+  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
+  // OpenAI vision fetches the image URL itself, so no base64 download needed.
+  const response = await timedFetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      max_tokens: 150,
+      temperature: 0.4,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "text", text: ALT_PROMPT(productTitle) },
+          { type: "image_url", image_url: { url: imageUrl } },
+        ],
+      }],
+    }),
+  }, 25000);
+  if (!response.ok) {
+    // The body carries the only useful diagnosis. An exhausted account returns
+    // 429 insufficient_quota while the key still authenticates fine, so a bare
+    // status code reads as a rate limit that will pass on its own — and it
+    // never does.
+    throw new Error(`OpenAI API error ${response.status}: ${(await response.text()).slice(0, 200)}`);
+  }
+  const result = await response.json();
+  return tidyAlt(result.choices?.[0]?.message?.content, productTitle);
+}
+
+async function altTextAnthropic(imageUrl, productTitle) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
+  // Unlike OpenAI, Anthropic will not fetch a URL — the bytes have to be sent
+  // inline, so the image is downloaded here first.
+  const imageResponse = await timedFetch(imageUrl, {}, 20000);
+  if (!imageResponse.ok) throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+  const base64Image = Buffer.from(await imageResponse.arrayBuffer()).toString("base64");
+
+  const url = imageUrl.toLowerCase();
+  const mediaType = url.includes(".png") ? "image/png"
+    : url.includes(".webp") ? "image/webp"
+    : url.includes(".gif") ? "image/gif"
+    : "image/jpeg";
+
+  const response = await timedFetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-3-5-haiku-20241022",
+      max_tokens: 150,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64Image } },
+          { type: "text", text: ALT_PROMPT(productTitle) },
+        ],
+      }],
+    }),
+  }, 30000);
+  if (!response.ok) {
+    throw new Error(`Anthropic API error ${response.status}: ${(await response.text()).slice(0, 200)}`);
+  }
+  const result = await response.json();
+  return tidyAlt(result.content?.[0]?.text, productTitle);
+}
+
+export async function generateAIAltText(imageUrl, productTitle) {
   try {
-    // OpenAI vision fetches the image URL itself, so no base64 download needed.
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        max_tokens: 150,
-        temperature: 0.4,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "text", text: `Generate SEO-optimized alt text for this ${productTitle} image. Include: product type, color, material, style. Describe what you actually see. Keep under 125 characters. Don't use "image of". Return only the alt text.` },
-            { type: "image_url", image_url: { url: imageUrl } },
-          ],
-        }],
-      }),
-    });
-    if (!response.ok) throw new Error(`OpenAI API error ${response.status}`);
-    const result = await response.json();
-    let altText = (result.choices?.[0]?.message?.content || "").trim().replace(/^["']|["']$/g, "").replace(/\n/g, " ");
-    if (altText.length > 125) altText = altText.substring(0, 122) + "...";
-    return altText || `${productTitle} - product image`;
+    return ALT_PROVIDER === "anthropic"
+      ? await altTextAnthropic(imageUrl, productTitle)
+      : await altTextOpenAI(imageUrl, productTitle);
   } catch (error) {
-    console.error("Error generating AI alt text:", error);
+    // Never fail the optimization over alt text — the image is still worth
+    // compressing. The generic caption is the signal that generation failed.
+    console.error("[ALT] %s generation failed:", ALT_PROVIDER, error?.message || error);
     return `${productTitle} - product image`;
   }
 }

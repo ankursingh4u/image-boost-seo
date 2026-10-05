@@ -313,7 +313,18 @@ function calculateSeoScore(altText) {
   return Math.min(score, 100);
 }
 
-async function generateAIAltText(imageUrl, productTitle, provider = 'openai') {
+// Which vision model writes the alt text. Set AI_ALT_PROVIDER to "anthropic" or
+// "openai"; defaults to openai so behaviour is unchanged when it is unset.
+//
+// This used to be a hardcoded default with no caller ever overriding it, which
+// made generateWithAnthropic below unreachable — the app had a whole second
+// provider implemented and no way to reach it. That mattered the moment the
+// OpenAI account ran out of credit: the key still authenticates, so it looks
+// configured, but every request 429s with insufficient_quota and every image
+// silently falls back to its product title.
+export const ALT_TEXT_PROVIDER = (process.env.AI_ALT_PROVIDER || 'openai').toLowerCase();
+
+async function generateAIAltText(imageUrl, productTitle, provider = ALT_TEXT_PROVIDER) {
   switch (provider) {
     case 'openai':
       return await generateWithOpenAI(imageUrl, productTitle);
