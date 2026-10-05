@@ -363,6 +363,42 @@ export async function uploadAndReplaceImage(admin, productId, originalMediaId, o
 // Alt text is generated with OpenAI only (gpt-4o-mini vision). There is
 // deliberately no second provider and no provider switch: one vision API is one
 // thing to fund, hold a key for, and disclose in the App Store listing.
+// Width of the image variant handed to the vision model.
+//
+// OpenAI prices vision by how much image it has to ingest, and a
+// full-resolution Shopify product photo is expensive: one measured at 14,245
+// tokens for a single caption, roughly $0.0022 an image, which at the Growth
+// quota of 15,000 images is about $33/month against a $49 plan.
+//
+// Shopify's CDN resizes on request, so asking for a 512px variant cuts the
+// token count several times over while leaving more than enough detail for the
+// colour / material / style questions the prompt asks. 512 is deliberately not
+// smaller: below roughly 400px the model starts guessing at fabric and pattern
+// instead of reading them.
+const VISION_WIDTH = num(process.env.VISION_IMAGE_WIDTH, 512, 128, 2048);
+
+// Rewrite a Shopify CDN url to a narrower variant, for the vision call ONLY.
+//
+// This must never be used for the download in optimizeImage(): that one needs
+// the original bytes, because it is the thing being compressed and replaced.
+// Shrinking the source there would silently degrade every merchant image.
+export function visionUrl(imageUrl, width = VISION_WIDTH) {
+  try {
+    const u = new URL(imageUrl);
+    const shopifyCdn =
+      u.hostname === "cdn.shopify.com" ||
+      u.hostname.endsWith(".shopify.com") ||
+      u.hostname.endsWith(".shopifycdn.net");
+    // A non-Shopify host has no documented resize parameter; sending the url
+    // untouched costs more but still works, which beats a broken request.
+    if (!shopifyCdn) return imageUrl;
+    u.searchParams.set("width", String(width));
+    return u.toString();
+  } catch {
+    return imageUrl; // unparseable url — hand it over as-is
+  }
+}
+
 const ALT_PROMPT = (productTitle) =>
   `Generate SEO-optimized alt text for this ${productTitle} image. Include: product type, color, material, style. Describe what you actually see. Keep under 125 characters. Don't use "image of". Return only the alt text.`;
 
@@ -390,7 +426,7 @@ async function altTextOpenAI(imageUrl, productTitle) {
         role: "user",
         content: [
           { type: "text", text: ALT_PROMPT(productTitle) },
-          { type: "image_url", image_url: { url: imageUrl } },
+          { type: "image_url", image_url: { url: visionUrl(imageUrl) } },
         ],
       }],
     }),

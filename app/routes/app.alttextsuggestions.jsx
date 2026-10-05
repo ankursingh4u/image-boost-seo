@@ -3,6 +3,7 @@ import { useLoaderData, useSubmit, useNavigation, useActionData, useFetcher, red
 import { authenticate } from '../shopify.server';
 import { getBillingStateCached } from '../billing.server';
 import { entitled } from '../plans.server';
+import { visionUrl } from '../optimize.server';
 import { setDefaultResultOrder } from 'node:dns';
 
 // AI alt text is a Starter+ feature. Returns whether the shop's plan includes it;
@@ -363,7 +364,10 @@ Requirements:
 
 Return ONLY the alt text, nothing else.`
           },
-          { type: 'image_url', image_url: { url: imageUrl } }
+          // Narrowed CDN variant — see visionUrl() for why. The bulk generator
+          // never downloads the image itself, so there is nothing else here
+          // that needs the full-resolution url.
+          { type: 'image_url', image_url: { url: visionUrl(imageUrl) } }
         ]
       }]
     })
