@@ -46,6 +46,21 @@ function getDateRange(timeRange) {
 /**
  * Fetch all products with pagination
  */
+// NOTE: this asks for `media`, not `images`, and that distinction is the whole
+// reason the dashboard works.
+//
+// The optimizer keys its per-image metafields off the MediaImage id
+// (`image_<MediaImage id>` — see imageKey() in optimize.server.js, which reads
+// from a media query). `product.images` returns the legacy ProductImage id
+// instead, a completely different id space for the same photo. This query used
+// to request `images`, so the lookup below built `image_<ProductImage id>` and
+// could never match a key that was written as `image_<MediaImage id>`. Every
+// record missed, and the dashboard reported 0 optimized images on a store with
+// hundreds genuinely optimized.
+//
+// metafields is also 250, not 20: the optimizer writes one metafield per image
+// plus a summary, so 20 silently truncated the records for any product with
+// more than nineteen images.
 async function fetchAllProducts(admin, cursor = null) {
   const query = `#graphql
     query GetProductsWithImages($cursor: String) {
@@ -59,18 +74,22 @@ async function fetchAllProducts(admin, cursor = null) {
             id
             title
             handle
-            images(first: 250) {
+            media(first: 250) {
               edges {
                 node {
-                  id
-                  url
-                  altText
-                  width
-                  height
+                  ... on MediaImage {
+                    id
+                    image {
+                      url
+                      altText
+                      width
+                      height
+                    }
+                  }
                 }
               }
             }
-            metafields(first: 20, namespace: "image_optimization") {
+            metafields(first: 250, namespace: "image_optimization") {
               edges {
                 node {
                   key
@@ -140,7 +159,20 @@ function processProductsData(products, timeRange) {
   let pageStats = [];
 
   products.forEach(product => {
-    const images = product.images.edges.map(edge => edge.node);
+    // Flatten MediaImage nodes to the shape the loop below expects. `id` stays
+    // the MediaImage gid so it matches the metafield keys the optimizer writes.
+    // Non-image media (video, 3D models) come back as empty objects from the
+    // inline fragment and are dropped.
+    const images = (product.media?.edges || [])
+      .map(edge => edge.node)
+      .filter(node => node && node.id && node.image?.url)
+      .map(node => ({
+        id: node.id,
+        url: node.image.url,
+        altText: node.image.altText,
+        width: node.image.width,
+        height: node.image.height,
+      }));
     const productUrl = `/products/${product.handle}`;
 
     let pageImageCount = 0;

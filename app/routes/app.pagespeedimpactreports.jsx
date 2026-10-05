@@ -48,7 +48,12 @@ async function getAllProductHandles(admin) {
             title
             handle
             onlineStoreUrl
-            metafields(first: 10, namespace: "image_optimization") {
+            # 250, not 10. The optimizer writes one metafield per image plus
+            # optimization_summary, and this page only wants the summary — but
+            # "image_..." sorts before "optimization_summary", so on any
+            # product with ten or more images the summary fell outside the
+            # page and getOptimizationData() below saw nothing to report.
+            metafields(first: 250, namespace: "image_optimization") {
               edges {
                 node {
                   key
