@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useLoaderData, useSubmit } from 'react-router';
+import { useState, useCallback, useEffect } from 'react';
+import { useLoaderData, useSubmit, useActionData, useNavigation } from 'react-router';
 import { authenticate } from '../shopify.server';
 import {
   Page,
@@ -391,7 +391,37 @@ export default function ImageOptimizationDashboard() {
   } = useLoaderData();
   
   const submit = useSubmit();
+  const actionData = useActionData();
+  const navigation = useNavigation();
   const [timeRange, setTimeRange] = useState(initialTimeRange);
+
+  // Export Report used to be a dead button. The action built the whole CSV and
+  // returned it, but nothing here read useActionData, so clicking it refetched
+  // the entire catalog server-side and silently discarded the result.
+  //
+  // The CSV is turned into a blob URL offered as a real link rather than a
+  // synthetic anchor click: this page runs inside Shopify's admin iframe, where
+  // a programmatic download is at the mercy of the frame's sandbox, while a
+  // genuine user click on an <a download> is not.
+  const [reportUrl, setReportUrl] = useState(null);
+  useEffect(() => {
+    if (!actionData?.success || !actionData.csv) {
+      setReportUrl(null);
+      return undefined;
+    }
+    const url = URL.createObjectURL(
+      new Blob([actionData.csv], { type: 'text/csv;charset=utf-8;' })
+    );
+    setReportUrl(url);
+    // Revoked on replacement/unmount so repeated exports don't leak blobs.
+    return () => URL.revokeObjectURL(url);
+  }, [actionData]);
+
+  // Building the report walks the full product catalog, which is slow on a
+  // large store. Without this the button gives no sign it is working.
+  const isExporting =
+    navigation.state === 'submitting' &&
+    navigation.formData?.get('actionType') === 'exportReport';
 
   const handleTimeRangeChange = useCallback((value) => {
     setTimeRange(value);
@@ -446,14 +476,19 @@ export default function ImageOptimizationDashboard() {
     <Page
       title="ImageBoost SEO — Optimization Analytics"
       subtitle="Measured results from your image optimization runs"
-      primaryAction={{ 
-        content: 'Export Report', 
-        onAction: handleExportReport 
+      primaryAction={{
+        content: 'Export Report',
+        onAction: handleExportReport,
+        loading: isExporting
       }}
       secondaryActions={[
         {
           content: 'Optimize Products',
-          url: '/app/product-optimization'
+          // No hyphen: the route is app.Productoptimization.jsx, which
+          // flat-routes maps to /app/productoptimization. This pointed at
+          // /app/product-optimization and 404'd, but the page had no nav entry
+          // and nothing linked to it, so the dead button was never clicked.
+          url: '/app/productoptimization'
         }
       ]}
     >
@@ -467,6 +502,24 @@ export default function ImageOptimizationDashboard() {
             </div>
           </div>
         </Layout.Section>
+
+        {reportUrl && (
+          <Layout.Section>
+            <Banner tone="success" title="Your report is ready">
+              <a href={reportUrl} download={actionData?.filename || 'report.csv'}>
+                Download CSV
+              </a>
+            </Banner>
+          </Layout.Section>
+        )}
+
+        {actionData?.success === false && (
+          <Layout.Section>
+            <Banner tone="critical" title="Couldn't build the report">
+              {actionData.error}
+            </Banner>
+          </Layout.Section>
+        )}
         {loadError && (
           <Layout.Section>
             <Banner title="Error" tone="critical">
