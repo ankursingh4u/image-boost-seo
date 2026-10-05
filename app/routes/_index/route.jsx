@@ -1,7 +1,17 @@
-import { redirect, Form, useLoaderData } from "react-router";
-import { login } from "../../shopify.server";
+import { redirect } from "react-router";
 import styles from "./styles.module.css";
 
+// Public landing page, shown when someone opens the app URL directly.
+//
+// There is deliberately NO "enter your shop domain" form here. App Store
+// requirement 2.3.1 forbids asking a merchant to type their myshopify.com
+// address: installation has to start from a Shopify surface and the shop must
+// be identified through OAuth or a session token. The Shopify template ships
+// that form by default and it had been carried over unchanged.
+//
+// The redirect below is the supported path — Shopify sends ?shop= when it
+// opens the app, and that is forwarded into the embedded app with the rest of
+// the parameters intact.
 export const loader = async ({ request }) => {
   const url = new URL(request.url);
 
@@ -9,43 +19,38 @@ export const loader = async ({ request }) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  return { showForm: Boolean(login) };
+  return null;
 };
 
 export default function App() {
-  const { showForm } = useLoaderData();
-
   return (
     <div className={styles.index}>
       <div className={styles.content}>
         <h1 className={styles.heading}>ImageBoost SEO</h1>
         <p className={styles.text}>
-          Image Optimization & SEO Suite for Shopify stores.
-          Compress images, generate AI alt text, and track performance.
+          Image optimization and SEO for Shopify stores. Compress product images,
+          convert them to WebP, generate alt text, and track the page-speed gains.
         </p>
-        {showForm && (
-          <Form className={styles.form} method="post" action="/auth/login">
-            <label className={styles.label}>
-              <span>Shop domain</span>
-              <input className={styles.input} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
-            </label>
-            <button className={styles.button} type="submit">
-              Log in
-            </button>
-          </Form>
-        )}
+        <p className={styles.text}>
+          Install ImageBoost SEO from the Shopify App Store to get started.
+        </p>
         <ul className={styles.list}>
           <li>
-            <strong>AI Alt Text Generator</strong>. Generate SEO-optimized alt text for product images using Claude or OpenAI.
+            <strong>Smart image compression</strong>. Convert product images to WebP and
+            replace the originals, keeping your image order intact.
           </li>
           <li>
-            <strong>Smart Image Compression</strong>. Reduce image sizes by up to 70% with automatic WebP conversion.
+            <strong>AI alt text</strong>. Generate SEO alt text for images that are missing
+            it, then apply it in bulk.
           </li>
           <li>
-            <strong>Performance Reports</strong>. Track Core Web Vitals and PageSpeed improvements in real-time.
+            <strong>Performance reports</strong>. Track page speed and see the size saved
+            across your catalog.
           </li>
         </ul>
+        <p className={styles.text}>
+          <a href="/privacy">Privacy policy</a>
+        </p>
       </div>
     </div>
   );
