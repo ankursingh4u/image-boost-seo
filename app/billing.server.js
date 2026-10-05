@@ -43,7 +43,10 @@ const CANCEL_MUTATION = `#graphql
 // (currentAppInstallation.app.handle); this value is only the fallback for when
 // that query is unavailable — which is exactly when the pricing wall shows, so
 // it still has to be right.
-const FALLBACK_APP_HANDLE = process.env.SHOPIFY_APP_HANDLE || "imageboost-seo";
+// Confirmed from a real install: the admin URL is
+// /store/<store>/apps/imageboost-seo-1/... — Shopify appended "-1", exactly the
+// collision suffix this comment warned about.
+const FALLBACK_APP_HANDLE = process.env.SHOPIFY_APP_HANDLE || "imageboost-seo-1";
 
 // Dev-only plan override. Development stores cannot approve PAID managed-pricing
 // subscriptions (Shopify restriction), so paid tiers can't be tested by

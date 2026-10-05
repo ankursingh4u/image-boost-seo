@@ -6,6 +6,13 @@
 // Note: because this is a Managed Pricing app, every "Choose plan" button sends
 // the merchant to Shopify's hosted pricing page where they pick the real plan —
 // the per-tier buttons here are purely informational about what they'll get.
+// EVERY bullet below must name something a merchant on that tier can actually
+// do today. This list previously advertised eight features that were never
+// built — Restore originals, SEO filenames, Resize & crop, Scheduled runs,
+// Watermarking & HEIC, Bulk image export, Priority processing — which is a
+// straightforward App Store rejection and, for the paid tiers, charging for
+// functionality that does not exist. Keep this in step with the entitlements
+// in plans.server.js; that file is the gate, this one is only the copy.
 export const PLAN_TIERS = [
   {
     name: "Free",
@@ -16,7 +23,7 @@ export const PLAN_TIERS = [
     features: [
       "100 images / month",
       "WebP conversion & compression",
-      "Restore originals",
+      "Optimization analytics",
     ],
   },
   {
@@ -29,9 +36,6 @@ export const PLAN_TIERS = [
       "2,000 images / month",
       "Everything in Free",
       "AI alt text",
-      "SEO filenames",
-      "Resize & crop",
-      "Scheduled runs",
     ],
   },
   {
@@ -45,7 +49,6 @@ export const PLAN_TIERS = [
       "15,000 images / month",
       "Everything in Starter",
       "Auto-optimize new products",
-      "Watermarking & HEIC",
       "Page Speed reports",
     ],
   },
@@ -55,11 +58,13 @@ export const PLAN_TIERS = [
     priceAnnual: 2499,
     images: "50,000",
     tagline: "High volume",
+    // NOTE: Pro now adds no capability over Growth — only quota. At $499/mo
+    // against Growth's $49 that is a 10x price for 3.3x the images, which is a
+    // hard sell with nothing else in the column. Either build the features that
+    // were being advertised, or reprice/reposition this tier.
     features: [
       "50,000 images / month",
       "Everything in Growth",
-      "Bulk image export",
-      "Priority processing",
     ],
   },
 ];

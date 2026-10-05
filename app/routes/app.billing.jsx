@@ -22,19 +22,20 @@ import {
 } from "@shopify/polaris";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
-// Human labels for the entitlement flags, shown as the current plan's inclusions.
+// Human labels for the entitlement flags, shown as the current plan's
+// inclusions. One label per flag that exists in plans.server.js FEATURES.
+//
+// This list is what a paying merchant reads as the definition of what they
+// bought, so it must never run ahead of the code. It previously carried labels
+// for eight unbuilt features, and because those flags were granted to the paid
+// tiers, a Starter subscriber's billing page listed SEO filenames, Resize &
+// crop and Scheduled runs as included. Add a label here only when the feature
+// ships.
 const FEATURE_LABELS = {
   optimize: "Image optimization & WebP conversion",
   altText: "AI alt text",
-  filenameSeo: "SEO filenames",
-  resize: "Resize & crop",
-  scheduling: "Scheduled runs",
-  watermark: "Watermarking",
-  heic: "HEIC support",
   autoOptimize: "Auto-optimize new products",
   pageSpeed: "Page Speed reports",
-  bulkExport: "Bulk image export",
-  priority: "Priority processing",
 };
 
 export const loader = async ({ request }) => {
