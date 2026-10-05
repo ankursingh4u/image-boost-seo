@@ -1,0 +1,50 @@
+name = "ImageBoost SEO"
+client_id = "56f6293099706dbf5770134b28217ea8"
+application_url = "https://imageboostseo.onkra.online"
+embedded = true
+
+
+[access_scopes]
+scopes = "write_products,write_files"
+
+[access.admin]
+direct_api_mode = "online"
+
+[auth]
+redirect_urls = [
+  "https://imageboostseo.onkra.online/auth/callback",
+  "https://imageboostseo.onkra.online/auth/shopify/callback",
+  "https://imageboostseo.onkra.online/api/auth/callback"
+]
+
+# Matches ApiVersion.October25 in app/shopify.server.js. These two MUST stay in
+# sync: the toml decides the shape of the webhook payloads Shopify sends, and the
+# code decides the shape it expects.
+[webhooks]
+api_version = "2025-10"
+
+[[webhooks.subscriptions]]
+topics = [ "app/uninstalled" ]
+uri = "https://imageboostseo.onkra.online/webhooks/app/uninstalled"
+
+[[webhooks.subscriptions]]
+topics = [ "app/scopes_update" ]
+uri = "https://imageboostseo.onkra.online/webhooks/app/scopes_update"
+
+[[webhooks.subscriptions]]
+topics = [ "products/create" ]
+uri = "https://imageboostseo.onkra.online/webhooks/products/create"
+
+# Mandatory privacy webhooks. These used to be declared as compliance_topics on
+# the app/uninstalled subscription, which answered 200 but did no actual
+# redaction work. They now have their own endpoint that handles each topic
+# explicitly — see app/routes/webhooks.compliance.jsx.
+[[webhooks.subscriptions]]
+compliance_topics = [ "customers/redact", "customers/data_request", "shop/redact" ]
+uri = "https://imageboostseo.onkra.online/webhooks/compliance"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = false

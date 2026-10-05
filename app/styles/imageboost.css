@@ -1,0 +1,364 @@
+/* ImageBoost SEO — Indigo brand theme.
+ *
+ * Every colour the app paints is declared in the :root block below and nowhere
+ * else. The previous version of this file kept its palette half in variables and
+ * half in literals scattered through the rules (and another twenty literals
+ * inline in PricingTiers.jsx), so a rebrand meant hunting hex codes across
+ * files and always missed a few. Re-theming now means editing only this block.
+ *
+ * Variables are consumed by PricingTiers.jsx too, so the pricing page and the
+ * embedded app can no longer drift apart.
+ */
+
+:root {
+  /* ── Brand ─────────────────────────────────── */
+  --ib-1: #4F46E5;            /* indigo        */
+  --ib-2: #2563EB;            /* blue          */
+  --ib-accent: #2563EB;
+  --ib-accent-dark: #1D4ED8;
+  --ib-accent-darker: #1E3A8A;
+  --ib-on-grad: #1E40AF;      /* brand text ON a light surface over the gradient */
+
+  /* ── Ink & neutrals ───────────────────────── */
+  --ib-ink: #111827;          /* cool near-black */
+  --ib-body: #374151;
+  --ib-muted: #6B7280;
+  --ib-faint: #9CA3AF;
+
+  /* ── Surfaces ─────────────────────────────── */
+  --ib-surface: #FFFFFF;
+  --ib-soft-1: #EEF2FF;
+  --ib-soft-2: #DBEAFE;
+  --ib-tint: #F5F7FF;         /* page wash */
+  --ib-hover-wash: #FAFBFF;
+
+  /* ── Borders ──────────────────────────────── */
+  --ib-border: #E2E8F5;
+  --ib-border-strong: #A5B4FC;
+
+  /* ── Gradients ────────────────────────────── */
+  --ib-grad: linear-gradient(135deg, #4F46E5 0%, #2563EB 100%);
+  --ib-grad-dark: linear-gradient(135deg, #4338CA 0%, #1D4ED8 100%);
+  --ib-grad-active: linear-gradient(135deg, #3730A3 0%, #1E3A8A 100%);
+  --ib-grad-soft: linear-gradient(135deg, #EEF2FF 0%, #DBEAFE 100%);
+  --ib-grad-hero: linear-gradient(118deg, #6366F1 0%, #4F46E5 58%, #1E40AF 100%);
+  --ib-grad-page: linear-gradient(180deg, #F5F7FF 0%, #E0E7FF 100%);
+
+  /* ── Effects ──────────────────────────────── */
+  --ib-ring: rgba(37, 99, 235, 0.18);
+  --ib-glow: rgba(79, 70, 229, 0.12);
+  --ib-glow-strong: rgba(79, 70, 229, 0.30);
+  --ib-btn-shadow: rgba(37, 99, 235, 0.32);
+  --ib-hero-shadow: rgba(30, 64, 175, 0.55);
+  --ib-ink-shadow: rgba(17, 24, 39, 0.08);
+  --ib-ink-shadow-soft: rgba(17, 24, 39, 0.05);
+  --ib-ink-shadow-strong: rgba(17, 24, 39, 0.45);
+
+  /* ── Disabled state ───────────────────────── */
+  --ib-disabled-bg: #E5E7EB;
+  --ib-disabled-fg: #9095A1;
+
+  /* ── Status chips ─────────────────────────── */
+  --ib-chip-brand-bg: #EEF2FF;
+  --ib-chip-brand-fg: #3730A3;
+  --ib-chip-brand-br: #C7D2FE;
+  --ib-chip-success-bg: #E9F7F0;
+  --ib-chip-success-fg: #0C6B45;
+  --ib-chip-success-br: #CCE9DB;
+  --ib-chip-attention-bg: #FFF6E8;
+  --ib-chip-attention-fg: #7A4F00;
+  --ib-chip-attention-br: #F3DFB4;
+  --ib-chip-subdued-bg: #F3F4F6;
+  --ib-chip-subdued-fg: #53535E;
+  --ib-chip-subdued-br: #E5E7EB;
+}
+
+/* ── Primary buttons ───────────────────────── */
+.Polaris-Button--variantPrimary {
+  background: var(--ib-grad) !important;
+  border-color: var(--ib-2) !important;
+  box-shadow: 0 2px 8px var(--ib-btn-shadow) !important;
+}
+.Polaris-Button--variantPrimary:hover:not(:disabled) {
+  background: var(--ib-grad-dark) !important;
+  border-color: var(--ib-accent-dark) !important;
+}
+.Polaris-Button--variantPrimary:active:not(:disabled) {
+  background: var(--ib-grad-active) !important;
+}
+/* A disabled button must LOOK disabled. The rule above sets the gradient with
+   !important on every primary button, which overrode Polaris's own disabled
+   styling — so a button that could not be clicked looked exactly like one that
+   could, and clicking it appeared to do nothing. */
+.Polaris-Button--variantPrimary:disabled,
+.Polaris-Button--variantPrimary[aria-disabled="true"] {
+  background: var(--ib-disabled-bg) !important;
+  border-color: var(--ib-disabled-bg) !important;
+  color: var(--ib-disabled-fg) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+.Polaris-Button--variantPrimary:disabled .Polaris-Text--root,
+.Polaris-Button--variantPrimary[aria-disabled="true"] .Polaris-Text--root {
+  color: inherit !important;
+}
+
+/* ── Links ─────────────────────────────────── */
+.Polaris-Link { color: var(--ib-accent) !important; }
+.Polaris-Link:hover { color: var(--ib-accent-dark) !important; }
+
+/* ── Focus rings ───────────────────────────── */
+.Polaris-TextField__Input:focus {
+  border-color: var(--ib-accent) !important;
+  box-shadow: 0 0 0 3px var(--ib-ring) !important;
+}
+
+/* ── Checkboxes ────────────────────────────── */
+.Polaris-Checkbox__Input:checked + .Polaris-Checkbox__Backdrop {
+  background: var(--ib-accent) !important;
+  border-color: var(--ib-accent) !important;
+}
+
+/* ── Hero banner ───────────────────────────── */
+.ib-hero {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 140% at 88% 8%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%),
+    var(--ib-grad-hero);
+  border-radius: 16px;
+  padding: 32px 36px;
+  color: white;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px var(--ib-ink-shadow),
+    0 18px 38px -18px var(--ib-hero-shadow);
+}
+/* Soft diagonal sheen — depth without the "cheap blob" look. */
+.ib-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 38%);
+  pointer-events: none; /* decorative only — must not block the hero button */
+  z-index: -1;
+}
+.ib-hero-copy { max-width: 620px; }
+.ib-hero-copy h1 { margin-bottom: 10px; }
+.ib-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  padding: 4px 11px 4px 9px;
+  margin: 0;
+}
+.ib-hero-eyebrow::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28);
+}
+.ib-hero h1 {
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: white;
+}
+.ib-hero p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0;
+}
+/* The hero sits on the brand gradient, so the gradient button would vanish
+   into it — invert to a solid white button instead. */
+.ib-hero .Polaris-Button--variantPrimary {
+  background: var(--ib-surface) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  color: var(--ib-on-grad) !important;
+  box-shadow: 0 6px 16px -6px var(--ib-ink-shadow-strong) !important;
+}
+.ib-hero .Polaris-Button--variantPrimary:hover:not(:disabled) {
+  background: var(--ib-soft-1) !important;
+  border-color: var(--ib-soft-1) !important;
+  color: var(--ib-accent-darker) !important;
+}
+.ib-hero .Polaris-Button--variantPrimary:active:not(:disabled) {
+  background: var(--ib-soft-2) !important;
+}
+.ib-hero .Polaris-Button--variantPrimary .Polaris-Text--root { color: inherit !important; }
+/* The inverted hero button must still read as disabled when it is. Without
+   this, the white-button override above wins and a dead button looks live. */
+.ib-hero .Polaris-Button--variantPrimary:disabled,
+.ib-hero .Polaris-Button--variantPrimary[aria-disabled="true"] {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  color: rgba(30, 58, 138, 0.55) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+/* ── Stat strip — one panel, hairline-divided cells ──────────── */
+.ib-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;                 /* the gap *is* the divider */
+  background: var(--ib-border);
+  border: 1px solid var(--ib-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px var(--ib-ink-shadow-soft);
+}
+@media (max-width: 900px) {
+  .ib-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.ib-stat-card {
+  background: var(--ib-surface);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: left;
+  min-width: 0;             /* let long values ellipsis instead of pushing the grid */
+  transition: background 0.18s ease;
+}
+.ib-stat-card:hover { background: var(--ib-hover-wash); }
+/* Label first, value second — set by order so markup stays value-then-label. */
+.ib-stat-label {
+  order: -1;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ib-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* Fixed figure height keeps numbers and chips on one baseline across cells. */
+.ib-stat-value,
+.ib-stat-chip {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  max-width: 100%;
+}
+.ib-stat-value {
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ib-ink);
+  margin: 0;
+}
+/* Text-valued stats read as a status chip, not a broken headline. */
+.ib-stat-chip {
+  min-height: 30px;
+  box-sizing: border-box;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ib-stat-chip--brand     { background: var(--ib-chip-brand-bg);     color: var(--ib-chip-brand-fg);     border: 1px solid var(--ib-chip-brand-br); }
+.ib-stat-chip--success   { background: var(--ib-chip-success-bg);   color: var(--ib-chip-success-fg);   border: 1px solid var(--ib-chip-success-br); }
+.ib-stat-chip--attention { background: var(--ib-chip-attention-bg); color: var(--ib-chip-attention-fg); border: 1px solid var(--ib-chip-attention-br); }
+.ib-stat-chip--subdued   { background: var(--ib-chip-subdued-bg);   color: var(--ib-chip-subdued-fg);   border: 1px solid var(--ib-chip-subdued-br); }
+
+/* ── Feature cards ──────────────────────────── */
+.ib-feature-card {
+  background: var(--ib-surface);
+  border: 1px solid var(--ib-border);
+  border-radius: 16px;
+  padding: 24px;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+  height: 100%;
+}
+.ib-feature-card:hover {
+  box-shadow: 0 10px 28px var(--ib-glow);
+  border-color: var(--ib-border-strong);
+  transform: translateY(-3px);
+}
+.ib-feature-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--ib-grad-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 14px;
+}
+.ib-feature-title { font-size: 16px; font-weight: 700; color: var(--ib-ink); margin: 0 0 8px 0; }
+.ib-feature-desc { font-size: 13px; color: var(--ib-muted); line-height: 1.5; margin: 0 0 16px 0; }
+.ib-feature-list { list-style: none; padding: 0; margin: 0 0 18px 0; }
+.ib-feature-list li {
+  font-size: 13px; color: var(--ib-body);
+  padding: 3px 0 3px 20px; position: relative;
+}
+.ib-feature-list li::before {
+  content: "✓";
+  color: var(--ib-accent);
+  position: absolute; left: 0; font-weight: 700;
+}
+
+/* ── Page header accent — solid card w/ left bar (distinct shape) ── */
+.ib-page-header {
+  background: var(--ib-surface);
+  border: 1px solid var(--ib-border);
+  border-left: 5px solid transparent;
+  border-image: var(--ib-grad) 1;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 4px 14px var(--ib-glow);
+}
+.ib-page-header-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: var(--ib-grad);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; line-height: 1;
+  box-shadow: 0 4px 12px var(--ib-glow-strong);
+}
+.ib-page-header-title { font-size: 15px; font-weight: 700; color: var(--ib-ink); margin: 0; }
+.ib-page-header-sub { font-size: 12px; color: var(--ib-accent); opacity: 0.9; margin: 2px 0 0 0; }
+
+/* ── Step badges ────────────────────────────── */
+.ib-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--ib-grad);
+  color: white;
+  font-size: 13px; font-weight: 700;
+  flex-shrink: 0;
+}
