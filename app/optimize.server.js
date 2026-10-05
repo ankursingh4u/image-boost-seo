@@ -310,11 +310,9 @@ export async function uploadAndReplaceImage(admin, productId, originalMediaId, o
   return newMedia.id;
 }
 
-// Which vision model writes the alt text during an optimization run. Mirrors
-// AI_ALT_PROVIDER in app.alttextsuggestions.jsx so both paths use the same
-// provider; defaults to openai, so an unset value changes nothing.
-const ALT_PROVIDER = (process.env.AI_ALT_PROVIDER || "openai").toLowerCase();
-
+// Alt text is generated with OpenAI only (gpt-4o-mini vision). There is
+// deliberately no second provider and no provider switch: one vision API is one
+// thing to fund, hold a key for, and disclose in the App Store listing.
 const ALT_PROMPT = (productTitle) =>
   `Generate SEO-optimized alt text for this ${productTitle} image. Include: product type, color, material, style. Describe what you actually see. Keep under 125 characters. Don't use "image of". Return only the alt text.`;
 
@@ -358,57 +356,13 @@ async function altTextOpenAI(imageUrl, productTitle) {
   return tidyAlt(result.choices?.[0]?.message?.content, productTitle);
 }
 
-async function altTextAnthropic(imageUrl, productTitle) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-
-  // Unlike OpenAI, Anthropic will not fetch a URL — the bytes have to be sent
-  // inline, so the image is downloaded here first.
-  const imageResponse = await timedFetch(imageUrl, {}, 20000);
-  if (!imageResponse.ok) throw new Error(`Failed to fetch image: ${imageResponse.status}`);
-  const base64Image = Buffer.from(await imageResponse.arrayBuffer()).toString("base64");
-
-  const url = imageUrl.toLowerCase();
-  const mediaType = url.includes(".png") ? "image/png"
-    : url.includes(".webp") ? "image/webp"
-    : url.includes(".gif") ? "image/gif"
-    : "image/jpeg";
-
-  const response = await timedFetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 150,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64Image } },
-          { type: "text", text: ALT_PROMPT(productTitle) },
-        ],
-      }],
-    }),
-  }, 30000);
-  if (!response.ok) {
-    throw new Error(`Anthropic API error ${response.status}: ${(await response.text()).slice(0, 200)}`);
-  }
-  const result = await response.json();
-  return tidyAlt(result.content?.[0]?.text, productTitle);
-}
-
 export async function generateAIAltText(imageUrl, productTitle) {
   try {
-    return ALT_PROVIDER === "anthropic"
-      ? await altTextAnthropic(imageUrl, productTitle)
-      : await altTextOpenAI(imageUrl, productTitle);
+    return await altTextOpenAI(imageUrl, productTitle);
   } catch (error) {
     // Never fail the optimization over alt text — the image is still worth
     // compressing. The generic caption is the signal that generation failed.
-    console.error("[ALT] %s generation failed:", ALT_PROVIDER, error?.message || error);
+    console.error("[ALT] OpenAI generation failed:", error?.message || error);
     return `${productTitle} - product image`;
   }
 }

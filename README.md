@@ -60,11 +60,32 @@ build ARG, where it persists in image history.
 | `SCOPES` | yes | `write_products,write_files` |
 | `SHOPIFY_APP_HANDLE` | yes | Path segment in the hosted pricing URL — see below |
 | `DATABASE_URL` | yes | PostgreSQL connection string |
-| `OPENAI_API_KEY` | feature | AI alt text. Unset ⇒ falls back to `"<title> - product image"` |
-| `ANTHROPIC_API_KEY` | feature | Alternate alt-text provider |
-| `GOOGLE_PAGESPEED_API_KEY` | feature | Page Speed reports. Unset ⇒ feature cannot run |
+| `OPENAI_API_KEY` | feature | AI alt text (the only provider). Unset **or unfunded** ⇒ falls back to `"<title> - product image"` |
+| `GOOGLE_PAGESPEED_API_KEY` | optional | Raises PageSpeed quota. Unset ⇒ keyless endpoint (low shared daily cap) |
 | `DEV_PLAN_OVERRIDE` | dev only | Force a tier (`starter`/`growth`/`pro`). **Never set in production** |
 | `DEV_PLAN_OVERRIDE_SHOP` | dev only | Scope the override to one shop |
+
+### AI alt text runs on OpenAI only
+
+`gpt-4o-mini` vision, in both `app/optimize.server.js` (during an optimization
+run) and `app/routes/app.alttextsuggestions.jsx` (the bulk generator). There is
+no second provider by design.
+
+**An unfunded OpenAI key looks identical to a working one.** It still
+authenticates — `/v1/models` returns 200 — but every completion returns
+`429 insufficient_quota`, so the app appears configured while every image falls
+back to its product title. Both call sites include the response body in the
+error for this reason; a bare `429` reads as a transient rate limit that will
+clear on its own, and it never does. Verify a key with an actual completion
+call, not an auth check.
+
+### `GOOGLE_PAGESPEED_API_KEY` is optional, and a wrong key is worse than none
+
+`runPageSpeedTest` falls back to the keyless PageSpeed Insights endpoint and
+retries with backoff. Only 429 and 5xx are retryable — a **403 breaks out
+immediately**. So a key that lacks the PageSpeed Insights API (Google returns
+`API_KEY_SERVICE_BLOCKED`) turns a degraded-but-working feature into a hard
+failure. Enable the PageSpeed Insights API for the key before setting it.
 
 Encoder tuning (`WEBP_QUALITY`, `MAX_IMAGE_DIM`, `BATCH_CONCURRENCY`, …) is
 documented inline in `app/optimize.server.js`; all have working defaults.

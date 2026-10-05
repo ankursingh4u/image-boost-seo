@@ -313,26 +313,21 @@ function calculateSeoScore(altText) {
   return Math.min(score, 100);
 }
 
-// Which vision model writes the alt text. Set AI_ALT_PROVIDER to "anthropic" or
-// "openai"; defaults to openai so behaviour is unchanged when it is unset.
+// OpenAI (gpt-4o-mini vision) is the only alt-text provider.
 //
-// This used to be a hardcoded default with no caller ever overriding it, which
-// made generateWithAnthropic below unreachable — the app had a whole second
-// provider implemented and no way to reach it. That mattered the moment the
-// OpenAI account ran out of credit: the key still authenticates, so it looks
-// configured, but every request 429s with insufficient_quota and every image
-// silently falls back to its product title.
-export const ALT_TEXT_PROVIDER = (process.env.AI_ALT_PROVIDER || 'openai').toLowerCase();
-
-async function generateAIAltText(imageUrl, productTitle, provider = ALT_TEXT_PROVIDER) {
-  switch (provider) {
-    case 'openai':
-      return await generateWithOpenAI(imageUrl, productTitle);
-    case 'anthropic':
-      return await generateWithAnthropic(imageUrl, productTitle);
-    default:
-      return generateSmartFallbackObject(productTitle, imageUrl);
-  }
+// This was previously a `provider` switch defaulting to 'openai' that no caller
+// ever overrode, so the Anthropic branch was unreachable dead code. Rather than
+// wire up a second provider, it is removed: one vision API is one thing to
+// fund, hold a key for, and disclose in the App Store listing.
+//
+// Note the failure mode this leaves. An OpenAI account with no credit still
+// authenticates — /v1/models returns 200 — but every completion comes back 429
+// insufficient_quota, so the key looks correctly configured while every image
+// silently falls back to its product title. generateWithOpenAI includes the
+// response body in the thrown error for exactly this reason, and the UI
+// surfaces it when every image falls back.
+async function generateAIAltText(imageUrl, productTitle) {
+  return await generateWithOpenAI(imageUrl, productTitle);
 }
 
 async function generateWithOpenAI(imageUrl, productTitle) {
@@ -387,73 +382,6 @@ Return ONLY the alt text, nothing else.`
   return { altText, seoScore: calculateSeoScore(altText) };
 }
 
-async function generateWithAnthropic(imageUrl, productTitle) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
-
-  const imageResponse = await fetchWithTimeout(imageUrl, {}, 20000);
-  if (!imageResponse.ok) throw new Error(`Failed to fetch image: ${imageResponse.status}`);
-
-  const imageBuffer = await imageResponse.arrayBuffer();
-  const base64Image = Buffer.from(imageBuffer).toString('base64');
-
-  let mediaType = 'image/jpeg';
-  const urlLower = imageUrl.toLowerCase();
-  if (urlLower.includes('.png')) mediaType = 'image/png';
-  else if (urlLower.includes('.webp')) mediaType = 'image/webp';
-  else if (urlLower.includes('.gif')) mediaType = 'image/gif';
-
-  const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 150,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType, data: base64Image }
-          },
-          {
-            type: 'text',
-            text: `Generate SEO-optimized alt text for this e-commerce product image.
-
-Product: ${productTitle}
-
-Requirements:
-- Include specific visual details (color, material, style, pattern)
-- Describe what you actually see in the image
-- Keep it under 125 characters
-- Make it natural and descriptive
-- Don't use "image of" or "picture of"
-- Focus on features that help customers understand the product
-
-Return ONLY the alt text, nothing else.`
-          }
-        ]
-      }]
-    })
-  }, 30000);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
-  }
-
-  const result = await response.json();
-  let altText = result.content[0]?.text?.trim() || '';
-  altText = altText.replace(/^["']|["']$/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ');
-  if (altText.length > 125) altText = altText.substring(0, 122) + '...';
-
-  return { altText, seoScore: calculateSeoScore(altText) };
-}
-
 function generateSmartFallback(productTitle, imageUrl) {
   const titleWords = productTitle.toLowerCase();
   const urlLower = imageUrl.toLowerCase();
@@ -476,13 +404,6 @@ function generateSmartFallback(productTitle, imageUrl) {
   let altText = `${productTitle} - ${description}`;
   if (altText.length > 125) altText = altText.substring(0, 122) + '...';
   return altText;
-}
-
-function generateSmartFallbackObject(productTitle, imageUrl) {
-  return {
-    altText: generateSmartFallback(productTitle, imageUrl),
-    seoScore: calculateSeoScore(generateSmartFallback(productTitle, imageUrl))
-  };
 }
 
 export default function AltTextSuggestions() {
