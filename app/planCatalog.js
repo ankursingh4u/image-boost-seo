@@ -36,6 +36,7 @@ export const PLAN_TIERS = [
       "2,000 images / month",
       "Everything in Free",
       "AI alt text",
+      "SEO filenames",
     ],
   },
   {

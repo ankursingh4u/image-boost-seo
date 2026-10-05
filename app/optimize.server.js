@@ -11,7 +11,9 @@
 // with images still pending.
 import sharp from "sharp";
 import { setDefaultResultOrder } from "node:dns";
+import { randomBytes } from "node:crypto";
 import { incrementUsage, reserveImages, refundImages } from "./usage.server";
+import { entitled } from "./plans.server";
 import db from "./db.server";
 
 /* -------------------------------------------------------------------------- */
@@ -236,10 +238,58 @@ export async function optimizeImage(imageUrl) {
 
 // Upload the optimized buffer via Shopify staged uploads, attach it to the
 // product, and delete the original. Returns the new MediaImage gid.
-export async function uploadAndReplaceImage(admin, productId, originalMediaId, optimizedBuffer, altText) {
+// Turn a product title into something safe to use as a filename.
+//
+// NFKD splits accented characters into base + combining mark so the mark can be
+// dropped ("Café" -> "cafe") instead of the whole character being lost. Anything
+// outside [a-z0-9] then collapses to a hyphen, which is what keeps apostrophes,
+// ampersands, slashes and emoji out of a name that Shopify's staged upload has
+// to accept.
+//
+// Returns "" for a title with no Latin characters at all — Devanagari, Arabic
+// and CJK titles slugify to nothing, and the caller must fall back rather than
+// upload a file called ".webp".
+function slugifyTitle(title) {
+  return String(title || "")
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50)
+    .replace(/-+$/g, "");
+}
+
+// A unique, short suffix. Filenames must stay unique: optimizeBatch replaces up
+// to BATCH_CONCURRENCY images at once, so several uploads for the same product
+// are in flight together and a bare slug would have them all competing for one
+// name.
+//
+// The randomness has to carry this, not the timestamp. Concurrent uploads land
+// in the same millisecond, so Date.now() is effectively a constant across a
+// batch — an earlier version paired it with only 1296 random variants and
+// produced 306 duplicates in 2000 names. randomBytes gives 16.7M per
+// millisecond, which keeps a batch comfortably clear of a birthday collision.
+function uniqueSuffix() {
+  return `${Date.now().toString(36)}${randomBytes(3).toString("hex")}`;
+}
+
+// SEO filename for an optimized image: "blue-cotton-shirt-m1k2p3x9.webp".
+// Falls back to the old generic name when the title yields no usable slug.
+export function seoFilename(productTitle, ext) {
+  const slug = slugifyTitle(productTitle);
+  return `${slug || "imageboost"}-${uniqueSuffix()}.${ext}`;
+}
+
+export async function uploadAndReplaceImage(admin, productId, originalMediaId, optimizedBuffer, altText, opts = {}) {
+  const { productTitle = "", seoNames = false } = opts;
   const isWebP = optimizedBuffer[8] === 0x57 && optimizedBuffer[9] === 0x45;
   const mimeType = isWebP ? "image/webp" : "image/jpeg";
-  const filename = `imageboost-${Date.now()}.${isWebP ? "webp" : "jpg"}`;
+  const ext = isWebP ? "webp" : "jpg";
+  // SEO filenames are a paid entitlement; without it the generic name is kept.
+  const filename = seoNames
+    ? seoFilename(productTitle, ext)
+    : `imageboost-${Date.now()}.${ext}`;
 
   const stagedRes = await admin.graphql(
     `#graphql
@@ -419,7 +469,7 @@ export async function writeSummary(admin, productId, totalImages, records) {
 //   genAlt         — generate AI alt text for images missing it (default true).
 //                    Pass false for plans without the alt-text entitlement (Free).
 export async function optimizeBatch(admin, productId, opts = {}) {
-  const { shop = null, remainingQuota = Infinity, genAlt = true } = opts;
+  const { shop = null, remainingQuota = Infinity, genAlt = true, seoNames = false } = opts;
 
   // Query current media (MediaImage gids) + existing optimization metafields.
   const response = await admin.graphql(
@@ -512,7 +562,10 @@ export async function optimizeBatch(admin, productId, opts = {}) {
         altText = await generateAIAltText(image.url, product.title);
       }
 
-      const newId = await uploadAndReplaceImage(admin, productId, image.id, opt.optimizedBuffer, altText);
+      const newId = await uploadAndReplaceImage(
+        admin, productId, image.id, opt.optimizedBuffer, altText,
+        { productTitle: product.title, seoNames }
+      );
       const key = `image_${newId.split("/").pop()}`;
       return {
         key,
@@ -754,7 +807,8 @@ export async function optimizeOneImage({ admin, productId, imageId, shop, plan, 
     }
 
     const newImageId = await uploadAndReplaceImage(
-      admin, productId, imageId, opt.optimizedBuffer, altText
+      admin, productId, imageId, opt.optimizedBuffer, altText,
+      { productTitle: product.title, seoNames: entitled(plan, "filenameSeo") }
     );
 
     // The optimized copy is attached, so the credit is genuinely spent from here

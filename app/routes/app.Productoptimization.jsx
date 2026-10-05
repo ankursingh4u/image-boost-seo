@@ -112,6 +112,7 @@ export async function action({ request }) {
         shop: session.shop,
         remainingQuota,
         genAlt: entitled(plan, 'altText'),
+        seoNames: entitled(plan, 'filenameSeo'),
       });
     } catch (error) {
       const msg = error?.graphQLErrors?.[0]?.message || error?.message || 'unknown error';

@@ -34,6 +34,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 const FEATURE_LABELS = {
   optimize: "Image optimization & WebP conversion",
   altText: "AI alt text",
+  filenameSeo: "SEO filenames",
   autoOptimize: "Auto-optimize new products",
   pageSpeed: "Page Speed reports",
 };

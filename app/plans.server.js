@@ -28,6 +28,7 @@ export const FEATURES = [
   "optimize",      // image compression / replace
   "webp",          // WebP conversion
   "altText",       // AI alt text
+  "filenameSeo",   // SEO filenames derived from the product title on upload
   "autoOptimize",  // background auto-optimize new products
   "pageSpeed",     // PageSpeed Insights reports
 ];
@@ -55,7 +56,7 @@ export const PLANS = [
     price: 19,
     priceAnnual: 190,
     monthlyImages: 2000,
-    features: feat("optimize", "webp", "altText"),
+    features: feat("optimize", "webp", "altText", "filenameSeo"),
   },
   {
     tier: "growth",
@@ -63,7 +64,7 @@ export const PLANS = [
     price: 49,
     priceAnnual: 490,
     monthlyImages: 15000,
-    features: feat("optimize", "webp", "altText", "autoOptimize", "pageSpeed"),
+    features: feat("optimize", "webp", "altText", "filenameSeo", "autoOptimize", "pageSpeed"),
   },
   {
     tier: "pro",
@@ -75,7 +76,7 @@ export const PLANS = [
     // features removed, the only thing it sells is headroom (50,000 images vs
     // 15,000). That is honest, but see the note in planCatalog.js: a 10x price
     // for 3.3x the quota is a pricing decision that needs revisiting.
-    features: feat("optimize", "webp", "altText", "autoOptimize", "pageSpeed"),
+    features: feat("optimize", "webp", "altText", "filenameSeo", "autoOptimize", "pageSpeed"),
   },
 ];
 
